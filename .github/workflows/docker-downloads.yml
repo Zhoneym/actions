@@ -94,10 +94,7 @@ jobs:
           for image in "${IMAGES[@]}"; do
             docker pull "$image"
           done
-
-      - name: Save images to tarball
-        run: |
-          docker save -o image.tar "${IMAGES[@]}"
+          docker save -o image.tar $IMAGE
 
       - name: Upload image.tar as artifact
         uses: actions/upload-artifact@v4
