@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y zstd bsdtar dpkg-dev
+          sudo apt install -y zstd libarchive-tools dpkg-dev
 
       - name: Download pkg.tar.zst
         run: |
