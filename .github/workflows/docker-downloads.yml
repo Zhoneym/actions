@@ -1,48 +1,51 @@
-name: Build Podman Static v5.5.2
+name: Convert Arch pkg.tar.zst to deb
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  convert:
+    runs-on: ubuntu-latest
+    name: Convert zotero pkg to deb
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            git make golang gcc \
-            btrfs-progs libbtrfs-dev \
-            libdevmapper-dev \
-            libglib2.0-dev \
-            libgpgme-dev \
-            libassuan-dev \
-            libseccomp-dev \
-            pkg-config \
-            libsystemd-dev \
-            wget bzip2
+          sudo apt install -y zstd bsdtar dpkg-dev
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      - name: Download Podman v5.5.2 source
+      - name: Download pkg.tar.zst
         run: |
-          wget https://github.com/containers/podman/archive/refs/tags/v5.5.2.tar.gz
-          tar -xf v5.5.2.tar.gz
-          mv podman-5.5.2 podman
-          cd podman
-          echo "GOFLAGS=-buildvcs=false" >> .gopackages.toml  # 避免 git 依赖问题
+          wget https://repo.archlinuxcn.org/aarch64/zotero-7.0.15-3-aarch64.pkg.tar.zst -O zotero.pkg.tar.zst
 
-      - name: Build static binary
+      - name: Extract pkg.tar.zst
         run: |
-          cd podman
-          make podman-static
+          mkdir extracted
+          bsdtar -xvf zotero.pkg.tar.zst -C extracted
 
-      - name: Upload binary
+      - name: Create DEBIAN control file
+        run: |
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr
+          cp -r extracted/usr/* deb/usr/
+
+          cat <<EOF > deb/DEBIAN/control
+          Package: zotero
+          Version: 7.0.15-3
+          Architecture: arm64
+          Maintainer: Your Name <you@example.com>
+          Description: Zotero (converted from Arch pkg)
+          EOF
+
+      - name: Build deb package
+        run: |
+          dpkg-deb --build deb zotero_7.0.15-3_arm64.deb
+
+      - name: Upload as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: podman-static-v5.5.2
-          path: podman/bin/podman-static
+          name: zotero-deb
+          path: zotero_7.0.15-3_arm64.deb
