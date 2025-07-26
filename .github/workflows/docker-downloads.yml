@@ -44,4 +44,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: gcc-9.5.0-build-dir
-        path: ${{ env.HOME }}/gcc-build/gcc-9.5.0-build
+        path: /home/runner/gcc-build/gcc-9.5.0-build
