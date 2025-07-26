@@ -1,52 +1,36 @@
-name: Build GCC 9 (up to make)
+name: Build Ubuntu 18.04 rootfs with GCC
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-gcc:
+  build-rootfs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install dependencies
+    - name: Install debootstrap
+      run: sudo apt-get update && sudo apt-get install -y debootstrap
+
+    - name: Create rootfs directory
+      run: mkdir rootfs
+
+    - name: Bootstrap minimal Ubuntu bionic rootfs
       run: |
-        sudo apt update
-        sudo apt install -y build-essential wget curl libgmp-dev libmpfr-dev libmpc-dev libisl-dev flex bison texinfo
+        sudo debootstrap --variant=minbase bionic rootfs http://archive.ubuntu.com/ubuntu/
 
-    - name: Download GCC 9 source
+    - name: Install gcc and g++ in rootfs
       run: |
-        mkdir -p $HOME/gcc-build
-        cd $HOME/gcc-build
-        wget https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
-        tar -xf gcc-9.5.0.tar.xz
+        sudo chroot rootfs /bin/bash -c "apt-get update"
+        sudo chroot rootfs /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y gcc g++"
 
-    - name: Configure GCC (static build)
-      run: |
-        cd $HOME/gcc-build
-        mkdir gcc-9.5.0-build
-        cd gcc-9.5.0-build
+    - name: Clean apt cache in rootfs
+      run: sudo chroot rootfs /bin/bash -c "apt-get clean"
 
-        ../gcc-9.5.0/configure \
-          --prefix=/usr/local/gcc-9 \
-          --disable-multilib \
-          --enable-languages=c,c++ \
-          --disable-bootstrap \
-          --disable-shared \
-          --enable-static \
-          --disable-nls
+    - name: Pack rootfs
+      run: tar czf ubuntu-bionic-gcc-rootfs.tar.gz -C rootfs .
 
-    - name: Build GCC (stop at make)
-      run: |
-        cd $HOME/gcc-build/gcc-9.5.0-build
-        make -j$(nproc)
-
-    - name: Compress build directory into tar.gz
-      run: |
-        cd $HOME/
-        tar -czf gcc-9.5.0.tar.gz $HOME/gcc-build
-
-    - name: Upload GCC build tarball
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: gcc-9.5.0-build-tarball
-        path: /home/runner/gcc-9.5.0.tar.gz
+        name: ubuntu-bionic-gcc-rootfs
+        path: ubuntu-bionic-gcc-rootfs.tar.gz
