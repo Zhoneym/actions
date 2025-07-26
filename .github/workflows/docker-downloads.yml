@@ -40,8 +40,13 @@ jobs:
         cd $HOME/gcc-build/gcc-9.5.0-build
         make -j$(nproc)
 
-    - name: Upload GCC build directory
+    - name: Compress build directory into tar.gz
+      run: |
+        cd $HOME/gcc-build
+        tar -czf gcc-9.5.0-build.tar.gz gcc-9.5.0-build
+
+    - name: Upload GCC build tarball
       uses: actions/upload-artifact@v4
       with:
-        name: gcc-9.5.0-build-dir
-        path: /home/runner/gcc-build/gcc-9.5.0-build
+        name: gcc-9.5.0-build-tarball
+        path: /home/runner/gcc-build/gcc-9.5.0-build.tar.gz
