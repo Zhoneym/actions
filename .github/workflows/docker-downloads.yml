@@ -27,7 +27,7 @@ jobs:
       run: sudo chroot rootfs /bin/bash -c "apt-get clean"
 
     - name: Pack rootfs
-      run: tar czf ubuntu-bionic-gcc-rootfs.tar.gz -C rootfs .
+      run: sudo tar czf ubuntu-bionic-gcc-rootfs.tar.gz -C rootfs .
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
