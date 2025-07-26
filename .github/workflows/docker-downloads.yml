@@ -1,34 +1,47 @@
-name: Save Docker Images to Tar
+name: Build GCC 9 (up to make)
 
 on:
   workflow_dispatch:
 
 jobs:
-  save-images:
+  build-gcc:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential wget curl libgmp-dev libmpfr-dev libmpc-dev libisl-dev flex bison texinfo
 
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v3
+    - name: Download GCC 9 source
+      run: |
+        mkdir -p $HOME/gcc-build
+        cd $HOME/gcc-build
+        wget https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz
+        tar -xf gcc-9.5.0.tar.xz
 
-      - name: Pull Docker images from images.txt
-        run: |
-          while IFS= read -r image; do
-            [ -z "$image" ] && continue
-            echo "Pulling $image"
-            docker pull "$image"
-          done < images.txt
+    - name: Configure GCC (static build)
+      run: |
+        cd $HOME/gcc-build
+        mkdir gcc-9.5.0-build
+        cd gcc-9.5.0-build
 
-      - name: Save all images to images.tar
-        run: |
-          images=$(cat images.txt | xargs)
-          docker save $images -o images.tar
+        ../gcc-9.5.0/configure \
+          --prefix=/usr/local/gcc-9 \
+          --disable-multilib \
+          --enable-languages=c,c++ \
+          --disable-bootstrap \
+          --disable-shared \
+          --enable-static \
+          --disable-nls
 
-      - name: Upload images.tar as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-images
-          path: images.tar
+    - name: Build GCC (stop at make)
+      run: |
+        cd $HOME/gcc-build/gcc-9.5.0-build
+        make -j$(nproc)
+
+    - name: Upload GCC build directory
+      uses: actions/upload-artifact@v4
+      with:
+        name: gcc-9.5.0-build-dir
+        path: ${{ env.HOME }}/gcc-build/gcc-9.5.0-build
