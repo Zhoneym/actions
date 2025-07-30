@@ -32,25 +32,6 @@ jobs:
       - name: Save image to TAR
         run: docker save -o nginx-rocky9.tar nginx:rocky9
 
-      - name: Create tag
-        id: tag
-        run: |
-          TAG="v$(date +'%Y%m%d%H%M%S')"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          git tag $TAG
-          git push origin $TAG
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          release_name: Release ${{ steps.tag.outputs.tag }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Docker image tar to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
