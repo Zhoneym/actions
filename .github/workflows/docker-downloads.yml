@@ -1,15 +1,19 @@
-name: Build Docker Image from Inline Dockerfile and Export as TAR
+name: Build and Release Docker Image as TAR
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'  # 例如 v1.0.0
 
 jobs:
-  build-from-dockerfile:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Create Dockerfile
       run: |
         cat <<EOF > Dockerfile
@@ -23,7 +27,6 @@ jobs:
             dnf clean all
 
         EXPOSE 80
-
         CMD ["nginx", "-g", "daemon off;"]
         EOF
 
@@ -38,9 +41,9 @@ jobs:
       run: |
         docker save -o my-nginx-rocky9.tar nginx:rocky9
 
-    - name: Upload TAR as artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload Docker image tar to GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: my-nginx-image
-        path: my-nginx-rocky9.tar
-
+        files: my-nginx-rocky9.tar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
