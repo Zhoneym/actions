@@ -3,12 +3,32 @@ name: Build and Release Docker Image as TAR
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write  # 必须用于推 tag、发布 Release
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate unique tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y%m%d%H%M%S')-${RANDOM}"
+          echo "tag=$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Set up Git identity and push tag
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          git tag ${{ steps.tag.outputs.tag }}
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git push origin ${{ steps.tag.outputs.tag }}
 
       - name: Create Dockerfile
         run: |
@@ -40,4 +60,3 @@ jobs:
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
