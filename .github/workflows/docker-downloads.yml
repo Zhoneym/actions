@@ -1,36 +1,46 @@
-name: Build Ubuntu 18.04 rootfs with GCC
+name: Build Docker Image from Inline Dockerfile and Export as TAR
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-rootfs:
+  build-from-dockerfile:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install debootstrap
-      run: sudo apt-get update && sudo apt-get install -y debootstrap
-
-    - name: Create rootfs directory
-      run: mkdir rootfs
-
-    - name: Bootstrap minimal Ubuntu bionic rootfs
+    - name: Create Dockerfile
       run: |
-        sudo debootstrap --variant=minbase bionic rootfs http://archive.ubuntu.com/ubuntu/
+        cat <<EOF > Dockerfile
+        FROM rockylinux:9
 
-    - name: Install gcc and g++ in rootfs
+        ENV TZ=Asia/Shanghai
+
+        RUN dnf -y update && \
+            dnf -y install epel-release && \
+            dnf -y install nginx nano vim && \
+            dnf clean all
+
+        EXPOSE 80
+
+        CMD ["nginx", "-g", "daemon off;"]
+        EOF
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
       run: |
-        sudo chroot rootfs /bin/bash -c "apt-get update"
-        sudo chroot rootfs /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y gcc g++"
+        docker build -t nginx:rocky9 .
 
-    - name: Clean apt cache in rootfs
-      run: sudo chroot rootfs /bin/bash -c "apt-get clean"
+    - name: Save image to TAR
+      run: |
+        docker save -o my-nginx-rocky9.tar nginx:rocky9
 
-    - name: Pack rootfs
-      run: sudo tar czf ubuntu-bionic-gcc-rootfs.tar.gz -C rootfs .
-
-    - name: Upload artifact
+    - name: Upload TAR as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu-bionic-gcc-rootfs
-        path: ubuntu-bionic-gcc-rootfs.tar.gz
+        name: my-nginx-image
+        path: my-nginx-rocky9.tar
+
