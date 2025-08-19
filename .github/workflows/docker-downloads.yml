@@ -1,5 +1,4 @@
-name: Save milvus-v2.6.0-gpu.tar
-
+name: Save redis-8.2.1-bookworm
 on:
   workflow_dispatch:
 
@@ -16,20 +15,16 @@ jobs:
 
       - name: Pull Docker images
         run: |
-          docker pull docker.m.daocloud.io/milvusdb/milvus:v2.6.0-gpu
-          docker pull docker.m.daocloud.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
-          docker pull quay.m.daocloud.io/coreos/etcd:v3.5.18
+          docker pull redis:8.2.1-bookworm
 
       - name: Save Docker images to tar
         run: |
           docker save \
-            docker.m.daocloud.io/milvusdb/milvus:v2.6.0-gpu \
-            docker.m.daocloud.io/minio/minio:RELEASE.2024-12-18T13-15-44Z \
-            quay.m.daocloud.io/coreos/etcd:v3.5.18 \
-            -o milvus-v2.6.0-gpu.tar
+            redis:8.2.1-bookworm \
+            -o redis-8.2.1-bookworm.tar
 
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: milvus-v2.6.0-gpu.tar
-          path: milvus-v2.6.0-gpu.tar
+          name: redis-8.2.1-bookworm.tar
+          path: redis-8.2.1-bookworm.tar
