@@ -1,4 +1,4 @@
-name: Save Dify Docker Images
+name: Save milvus-v2.6.0-gpu.tar
 
 on:
   workflow_dispatch:
@@ -31,5 +31,5 @@ jobs:
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xinference
-          path: xinference.tar
+          name: milvus-v2.6.0-gpu.tar
+          path: milvus-v2.6.0-gpu.tar
