@@ -16,13 +16,17 @@ jobs:
 
       - name: Pull Docker images
         run: |
-          docker pull xprobe/xinference:latest
+          docker pull docker.m.daocloud.io/milvusdb/milvus:v2.6.0-gpu
+          docker pull docker.m.daocloud.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+          docker pull quay.m.daocloud.io/coreos/etcd:v3.5.18
 
       - name: Save Docker images to tar
         run: |
           docker save \
-            xprobe/xinference:latest \
-            -o xinference.tar
+            docker.m.daocloud.io/milvusdb/milvus:v2.6.0-gpu \
+            docker.m.daocloud.io/minio/minio:RELEASE.2024-12-18T13-15-44Z \
+            quay.m.daocloud.io/coreos/etcd:v3.5.18 \
+            -o milvus-v2.6.0-gpu.tar
 
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
