@@ -1,42 +1,71 @@
-name: Build switch-l4t kernels (linux-5.1.2)
+name: Build Switch L4T Kernel
 
 on:
   push:
-    branches:
-      - linux-5.1.2
-  workflow_dispatch:
+    tags:
+      - 'linux-5.1.2'
 
 jobs:
-  build-kernels:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        name: [switch-l4t-kernel-nvidia, switch-l4t-kernel-4.9, switch-l4t-platform-t210-nx]
-        repo: [CTCaer/switch-l4t-kernel-nvidia, CTCaer/switch-l4t-kernel-4.9, CTCaer/switch-l4t-platform-t210-nx]
+
     steps:
-      - name: Checkout repo ${{ matrix.name }}
-        uses: actions/checkout@v4
+      - name: Checkout repositories
+        uses: actions/checkout@v3
         with:
-          repository: ${{ matrix.repo }}
+          repository: CTCaer/switch-l4t-kernel-4.9
           ref: linux-5.1.2
+          path: kernel
 
-      - name: Print working directory
-        run: pwd
+      - name: Checkout kernel-nvidia
+        uses: actions/checkout@v3
+        with:
+          repository: CTCaer/switch-l4t-kernel-nvidia
+          ref: linux-5.1.2
+          path: kernel-nvidia
 
-      - name: Prepare build
+      - name: Checkout platform-t210-nx
+        uses: actions/checkout@v3
+        with:
+          repository: CTCaer/switch-l4t-platform-t210-nx
+          ref: linux-5.1.2
+          path: platform-t210-nx
+
+      - name: Merge kernel-nvidia into kernel
         run: |
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          make tegra_linux_defconfig
+          cd kernel
+          git remote add kernel-nvidia ../kernel-nvidia
+          git fetch kernel-nvidia
+          git merge kernel-nvidia/linux-5.1.2 --allow-unrelated-histories -m "Merge kernel-nvidia into kernel"
+
+      - name: Merge platform-t210-nx into kernel
+        run: |
+          cd kernel
+          git remote add platform-t210-nx ../platform-t210-nx
+          git fetch platform-t210-nx
+          git merge platform-t210-nx/linux-5.1.2 --allow-unrelated-histories -m "Merge platform-t210-nx into kernel"
+
+      - name: Set up cross-compilation toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Download tegra_linux_defconfig
+        run: |
+          wget https://raw.githubusercontent.com/CTCaer/switch-l4t-kernel-4.9/refs/tags/linux-5.1.2/arch/arm64/configs/tegra_linux_defconfig -O kernel/.config
 
       - name: Build kernel
-        run: make -j$(nproc)
+        run: |
+          cd kernel
+          make ARCH=arm64 tegra_linux_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+        env:
+          KBUILD_BUILD_USER: github
+          KBUILD_BUILD_HOST: github-actions
 
-      - name: Upload artifact
+      - name: Archive kernel build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.name }}-kernel-image
-          path: |
-            arch/arm64/boot/Image
-            vmlinux
+          name: kernel-build
+          path: kernel/arch/arm64/boot/Image
 
