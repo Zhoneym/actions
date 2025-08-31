@@ -8,18 +8,11 @@ on:
 
 jobs:
   build-kernels:
-    name: Build Kernels (linux-5.1.2)
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo:
-          - name: switch-l4t-kernel-nvidia
-            repo: CTCaer/switch-l4t-kernel-nvidia
-          - name: switch-l4t-kernel-4.9
-            repo: CTCaer/switch-l4t-kernel-4.9
-          - name: switch-l4t-platform-t210-nx
-            repo: CTCaer/switch-l4t-platform-t210-nx
-
+        name: [switch-l4t-kernel-nvidia, switch-l4t-kernel-4.9, switch-l4t-platform-t210-nx]
+        repo: [CTCaer/switch-l4t-kernel-nvidia, CTCaer/switch-l4t-kernel-4.9, CTCaer/switch-l4t-platform-t210-nx]
     steps:
       - name: Checkout repo ${{ matrix.name }}
         uses: actions/checkout@v4
@@ -40,9 +33,10 @@ jobs:
         run: make -j$(nproc)
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.name }}-kernel-image
           path: |
             arch/arm64/boot/Image
             vmlinux
+
