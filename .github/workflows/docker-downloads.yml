@@ -99,7 +99,7 @@ jobs:
 
       # Capture the output artifact
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sane-airscan-arm64-deb
           path: |
