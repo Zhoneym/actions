@@ -41,8 +41,7 @@ jobs:
               ninja
 
               cd ..
-              checkinstall --install=no --pkgname=sane-airscan \
-                --pkgversion=1.0 --arch=arm64 -y
+              checkinstall --install=no --fstrans=no --pkgname=sane-airscan --pkgversion=1.0 --arch=arm64 -y
 
               mkdir -p /workspace/artifacts
               mv *.deb /workspace/artifacts/
