@@ -1,106 +1,45 @@
-name: Build sane-airscan arm64 .deb
+name: Build sane-airscan arm64 deb
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
       - master
-  workflow_dispatch:
 
 jobs:
   build-deb:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [arm64]
     steps:
-      # 1. Checkout 代码
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. 安装交叉编译支持
-      - name: Setup QEMU for cross-platform builds
-        uses: docker/setup-qemu-action@v3
-
-      - name: Setup arm64 Docker container
-        uses: addnab/docker-run-action@v3
+      - name: Build inside arm64 container
+        uses: uraimo/run-on-arch-action@v2
         with:
-          image: ubuntu:24.04
-          platform: linux/arm64
-          options: --privileged
+          arch: aarch64
+          distro: ubuntu24.04
           run: |
-            apt update
-            apt install -y build-essential meson ninja-build pkg-config \
+            apt-get update
+            apt-get install -y build-essential meson ninja-build pkg-config \
               libjpeg-dev libpng-dev libtiff-dev libgnutls28-dev \
               libavahi-client-dev libavahi-common-dev libxml2-dev zlib1g-dev \
               libsane-dev dh-make devscripts fakeroot git
 
             git clone https://github.com/alexpevzner/sane-airscan.git
             cd sane-airscan
-
-            mkdir build
-            cd build
+            mkdir build && cd build
             meson setup --prefix=/usr --buildtype=release ..
             ninja
 
-            # 使用 debhelper 打包
             cd ..
-            # 准备 debian/ 目录
-            mkdir -p debian
-            cat > debian/control << 'EOF'
-            Source: sane-airscan
-            Section: graphics
-            Priority: optional
-            Maintainer: Your Name <you@example.com>
-            Standards-Version: 4.5.0
-            Build-Depends: debhelper-compat (= 13), meson, ninja-build, pkg-config, \
-              libjpeg-dev, libpng-dev, libtiff-dev, libgnutls28-dev, \
-              libavahi-client-dev, libavahi-common-dev, libxml2-dev, zlib1g-dev, \
-              libsane-dev
-            Homepage: https://github.com/alexpevzner/sane-airscan
-            Rules-Requires-Root: no
+            # 打一个最简单的二进制包（不写复杂 debian/）
+            checkinstall --install=no --pkgname=sane-airscan --pkgversion=1.0 --arch=arm64 -y
 
-            Package: sane-airscan
-            Architecture: arm64
-            Depends: \${shlibs:Depends}, \${misc:Depends}
-            Description: SANE backend for AirScan (eSCL) and WSD document scanners
-             A driverless (AirScan/eSCL and WSD) backend for SANE
-            EOF
+            mkdir -p /github/workspace/artifacts
+            mv *.deb /github/workspace/artifacts/
 
-            mkdir -p debian/source
-            echo "3.0 (quilt)" > debian/source/format
-            echo "9" > debian/compat
-
-            # debian/rules
-            cat > debian/rules << 'EOF'
-            #!/usr/bin/make -f
-            %:
-            	dh $@ --buildsystem=meson
-            EOF
-            chmod +x debian/rules
-
-            # 版权文件
-            cat > debian/copyright << 'EOF'
-            Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-            Upstream-Name: sane-airscan
-            Source: https://github.com/alexpevzner/sane-airscan
-
-            Files: *
-            Copyright: 2025 Your Name
-            License: GPL-2+
-             This package is licensed under GPL-2+, see LICENSE in the upstream source.
-            EOF
-
-            # 构建包
-            DEB_BUILD_OPTIONS=nocheck debuild -us -uc -b
-
-            # 将 .deb 移动到工作目录
-            cp ../*.deb /out/
-
-      # Capture the output artifact
-      - name: Upload .deb artifact
+      - name: Upload deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sane-airscan-arm64-deb
-          path: |
-            out/*.deb
+          name: sane-airscan-arm64
+          path: artifacts/*.deb
