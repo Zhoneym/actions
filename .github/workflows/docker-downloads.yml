@@ -1,71 +1,106 @@
-name: Build Switch L4T Kernel
+name: Build sane-airscan arm64 .deb
 
 on:
   push:
-    tags:
-      - 'linux-5.1.2'
+    branches:
+      - main
+      - master
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-deb:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        platform: [arm64]
     steps:
-      - name: Checkout repositories
-        uses: actions/checkout@v3
+      # 1. Checkout 代码
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # 2. 安装交叉编译支持
+      - name: Setup QEMU for cross-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup arm64 Docker container
+        uses: addnab/docker-run-action@v4
         with:
-          repository: CTCaer/switch-l4t-kernel-4.9
-          ref: linux-5.1.2
-          path: kernel
+          image: ubuntu:24.04
+          platform: linux/arm64
+          options: --privileged
+          run: |
+            apt update
+            apt install -y build-essential meson ninja-build pkg-config \
+              libjpeg-dev libpng-dev libtiff-dev libgnutls28-dev \
+              libavahi-client-dev libavahi-common-dev libxml2-dev zlib1g-dev \
+              libsane-dev dh-make devscripts fakeroot git
 
-      - name: Checkout kernel-nvidia
-        uses: actions/checkout@v3
-        with:
-          repository: CTCaer/switch-l4t-kernel-nvidia
-          ref: linux-5.1.2
-          path: kernel-nvidia
+            git clone https://github.com/alexpevzner/sane-airscan.git
+            cd sane-airscan
 
-      - name: Checkout platform-t210-nx
-        uses: actions/checkout@v3
-        with:
-          repository: CTCaer/switch-l4t-platform-t210-nx
-          ref: linux-5.1.2
-          path: platform-t210-nx
+            mkdir build
+            cd build
+            meson setup --prefix=/usr --buildtype=release ..
+            ninja
 
-      - name: Merge kernel-nvidia into kernel
-        run: |
-          cd kernel
-          git remote add kernel-nvidia ../kernel-nvidia
-          git fetch kernel-nvidia
-          git merge kernel-nvidia/linux-5.1.2 --allow-unrelated-histories -m "Merge kernel-nvidia into kernel"
+            # 使用 debhelper 打包
+            cd ..
+            # 准备 debian/ 目录
+            mkdir -p debian
+            cat > debian/control << 'EOF'
+            Source: sane-airscan
+            Section: graphics
+            Priority: optional
+            Maintainer: Your Name <you@example.com>
+            Standards-Version: 4.5.0
+            Build-Depends: debhelper-compat (= 13), meson, ninja-build, pkg-config, \
+              libjpeg-dev, libpng-dev, libtiff-dev, libgnutls28-dev, \
+              libavahi-client-dev, libavahi-common-dev, libxml2-dev, zlib1g-dev, \
+              libsane-dev
+            Homepage: https://github.com/alexpevzner/sane-airscan
+            Rules-Requires-Root: no
 
-      - name: Merge platform-t210-nx into kernel
-        run: |
-          cd kernel
-          git remote add platform-t210-nx ../platform-t210-nx
-          git fetch platform-t210-nx
-          git merge platform-t210-nx/linux-5.1.2 --allow-unrelated-histories -m "Merge platform-t210-nx into kernel"
+            Package: sane-airscan
+            Architecture: arm64
+            Depends: \${shlibs:Depends}, \${misc:Depends}
+            Description: SANE backend for AirScan (eSCL) and WSD document scanners
+             A driverless (AirScan/eSCL and WSD) backend for SANE
+            EOF
 
-      - name: Set up cross-compilation toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+            mkdir -p debian/source
+            echo "3.0 (quilt)" > debian/source/format
+            echo "9" > debian/compat
 
-      - name: Download tegra_linux_defconfig
-        run: |
-          wget https://raw.githubusercontent.com/CTCaer/switch-l4t-kernel-4.9/refs/tags/linux-5.1.2/arch/arm64/configs/tegra_linux_defconfig -O kernel/.config
+            # debian/rules
+            cat > debian/rules << 'EOF'
+            #!/usr/bin/make -f
+            %:
+            	dh $@ --buildsystem=meson
+            EOF
+            chmod +x debian/rules
 
-      - name: Build kernel
-        run: |
-          cd kernel
-          make ARCH=arm64 tegra_linux_defconfig
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
-        env:
-          KBUILD_BUILD_USER: github
-          KBUILD_BUILD_HOST: github-actions
+            # 版权文件
+            cat > debian/copyright << 'EOF'
+            Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+            Upstream-Name: sane-airscan
+            Source: https://github.com/alexpevzner/sane-airscan
 
-      - name: Archive kernel build artifacts
+            Files: *
+            Copyright: 2025 Your Name
+            License: GPL-2+
+             This package is licensed under GPL-2+, see LICENSE in the upstream source.
+            EOF
+
+            # 构建包
+            DEB_BUILD_OPTIONS=nocheck debuild -us -uc -b
+
+            # 将 .deb 移动到工作目录
+            cp ../*.deb /out/
+
+      # Capture the output artifact
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v3
         with:
-          name: kernel-build
-          path: kernel/arch/arm64/boot/Image
-
+          name: sane-airscan-arm64-deb
+          path: |
+            out/*.deb
