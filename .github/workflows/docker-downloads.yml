@@ -16,29 +16,13 @@ jobs:
 
       - name: Pull Docker images
         run: |
-          docker pull langgenius/dify-api:0.15.5
-          docker pull langgenius/dify-web:0.15.5
-          docker pull langgenius/dify-sandbox:0.2.11
-          docker pull semitechnologies/weaviate:1.19.0
-          docker pull postgres:15-alpine
-          docker pull redis:6-alpine
-          docker pull nginx:latest
-          docker pull ubuntu/squid:latest
+          docker pull browsh/browsh
       - name: Save Docker images to tar
         run: |
-          docker save \
-            langgenius/dify-api:0.15.5 \
-            langgenius/dify-web:0.15.5 \
-            langgenius/dify-sandbox:0.2.11 \
-            semitechnologies/weaviate:1.19.0 \
-            postgres:15-alpine \
-            redis:6-alpine \
-            nginx:latest \
-            ubuntu/squid:latest \
-            -o dify-0.15.5.tar
+          docker save browsh/browsh/browsh -o browsh.tar
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dify-0.15.5
-          path: dify-0.15.5.tar
+          name: browsh.tar
+          path: browsh.tar
 
