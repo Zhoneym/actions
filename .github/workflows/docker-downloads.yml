@@ -19,7 +19,7 @@ jobs:
           docker pull browsh/browsh
       - name: Save Docker images to tar
         run: |
-          docker save browsh/browsh/browsh -o browsh.tar
+          docker save browsh/browsh -o browsh.tar
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
