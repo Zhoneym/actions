@@ -16,13 +16,13 @@ jobs:
 
       - name: Pull Docker images
         run: |
-          docker pull browsh/browsh
+          docker pull xprobe/xinference:latest-cpu
       - name: Save Docker images to tar
         run: |
-          docker save browsh/browsh -o browsh.tar
+          docker save xprobe/xinference:latest-cpu -o cpu.tar
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: browsh.tar
-          path: browsh.tar
+          name: cpu.tar
+          path: cpu.tar
 
