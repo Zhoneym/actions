@@ -17,9 +17,10 @@ jobs:
       - name: Pull Docker images
         run: |
           docker pull zilliz/attu:v2.6 && docker pull milvusdb/milvus:v2.6.2
+          docker pull minio/minio:RELEASE.2024-12-18T13-15-44Z && docker pull coreos/etcd:v3.5.18
       - name: Save Docker images to tar
         run: |
-          docker save milvusdb/milvus:v2.6.2 zilliz/attu:v2.6 -o cpu.tar
+          docker save coreos/etcd:v3.5.18 minio/minio:RELEASE.2024-12-18T13-15-44Z milvusdb/milvus:v2.6.2 zilliz/attu:v2.6 -o cpu.tar
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
