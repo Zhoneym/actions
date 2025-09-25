@@ -16,10 +16,10 @@ jobs:
 
       - name: Pull Docker images
         run: |
-          docker pull xprobe/xinference:latest-cpu
+          docker pull zilliz/attu:v2.6 && docker pull milvusdb/milvus:v2.6.2
       - name: Save Docker images to tar
         run: |
-          docker save xprobe/xinference:latest-cpu -o cpu.tar
+          docker save milvusdb/milvus:v2.6.2 zilliz/attu:v2.6 -o cpu.tar
       - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
