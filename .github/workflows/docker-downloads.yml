@@ -1,29 +1,64 @@
-name: Save Docker Images
+name: Build HopSignal Docker Image
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:       # 允许手动触发
+  push:
+    branches:
+      - main               # 也可改成你的分支
 
 jobs:
-  save-images:
+  build:
     runs-on: ubuntu-latest
 
     steps:
+      # 拉取仓库代码
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      # 在工作流中动态写入 Dockerfile
+      - name: Create Dockerfile
+        run: |
+          cat <<'EOF' > Dockerfile
+          FROM ubuntu:22.04
+
+          ENV DEBIAN_FRONTEND=noninteractive
+
+          # 安装 systemd、wget、curl、cron
+          RUN apt-get update -y && \
+              apt-get install -y systemd wget curl cron && \
+              apt-get clean && \
+              rm -rf /var/lib/apt/lists/*
+
+          WORKDIR /root
+
+          # 下载原始 hsinstall.sh
+          RUN curl -o hsinstall.sh -sL https://www.hoptodesk.com/hs/hsinstall && \
+              chmod +x hsinstall.sh
+
+          # 容器启动时执行安装脚本并交给 systemd
+          CMD ["/bin/bash","-c","/root/hsinstall.sh && exec /sbin/init"]
+          EOF
+
+      # 设置 Buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      - name: Pull Docker images
+      # 构建镜像
+      - name: Build Docker image
         run: |
-          docker pull zilliz/attu:v2.6 && docker pull milvusdb/milvus:v2.6.2
-          docker pull minio/minio:RELEASE.2024-12-18T13-15-44Z && docker pull quay.io/coreos/etcd:v3.5.18
-      - name: Save Docker images to tar
+          docker build -t hopsignal:latest .
+
+      # 保存为 tar 文件
+      - name: Save Docker image to tar
         run: |
-          docker save quay.io/coreos/etcd:v3.5.18 minio/minio:RELEASE.2024-12-18T13-15-44Z milvusdb/milvus:v2.6.2 zilliz/attu:v2.6 -o cpu.tar
-      - name: Upload tar as artifact
+          mkdir -p output
+          docker save hopsignal:latest -o output/hopsignal.tar
+          ls -lh output/
+
+      # 上传 tar 工件
+      - name: Upload hopsignal tar
         uses: actions/upload-artifact@v4
         with:
-          name: cpu.tar
-          path: cpu.tar
-
+          name: hopsignal-image
+          path: output/hopsignal.tar
+          retention-days: 7
