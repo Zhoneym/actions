@@ -1,64 +1,63 @@
-name: Build HopSignal Docker Image
+name: Build HopSignal Docker Image (systemd)
 
 on:
-  workflow_dispatch:       # 允许手动触发
+  workflow_dispatch:
   push:
     branches:
-      - main               # 也可改成你的分支
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 拉取仓库代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 在工作流中动态写入 Dockerfile
       - name: Create Dockerfile
         run: |
           cat <<'EOF' > Dockerfile
-          FROM ubuntu:22.04
+          FROM ubuntu:24.04
 
           ENV DEBIAN_FRONTEND=noninteractive
 
-          # 安装 systemd、wget、curl、cron
+          # 安装 systemd 和工具
           RUN apt-get update -y && \
-              apt-get install -y systemd wget curl cron && \
+              apt-get install -y systemd wget curl bash cron && \
               apt-get clean && \
               rm -rf /var/lib/apt/lists/*
 
-          WORKDIR /root
+          WORKDIR /home
 
-          # 下载原始 hsinstall.sh
+          # 下载并执行 HopSignal 官方安装脚本
           RUN curl -o hsinstall.sh -sL https://www.hoptodesk.com/hs/hsinstall && \
-              chmod +x hsinstall.sh
+              chmod +x hsinstall.sh && \
+              bash hsinstall.sh
 
-          # 容器启动时执行安装脚本并交给 systemd
-          CMD ["/bin/bash","-c","/root/hsinstall.sh && exec /sbin/init"]
+          # 暴露 HopSignal 默认端口
+          EXPOSE 80 82
+
+          # 以 systemd 作为 PID 1 启动
+          CMD ["/sbin/init"]
           EOF
 
-      # 设置 Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 构建镜像
       - name: Build Docker image
         run: |
-          docker build -t hopsignal:latest .
+          docker build -t hopsignal:systemd .
 
-      # 保存为 tar 文件
       - name: Save Docker image to tar
         run: |
           mkdir -p output
-          docker save hopsignal:latest -o output/hopsignal.tar
+          docker save hopsignal:systemd -o output/hopsignal-systemd.tar
           ls -lh output/
 
-      # 上传 tar 工件
       - name: Upload hopsignal tar
         uses: actions/upload-artifact@v4
         with:
           name: hopsignal-image
-          path: output/hopsignal.tar
+          path: output/hopsignal-systemd.tar
           retention-days: 7
+
