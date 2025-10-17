@@ -20,7 +20,7 @@ jobs:
       # -------------------------------
       - name: Download musl toolchain
         run: |
-          curl -o https://musl.cc/x86_64-linux-musl-native.tgz
+          curl -L -o x86_64-linux-musl-native.tgz https://musl.cc/x86_64-linux-musl-native.tgz
           tar -xf x86_64-linux-musl-native.tgz
           echo "$PWD/x86_64-linux-musl-native/bin" >> $GITHUB_PATH
 
