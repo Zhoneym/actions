@@ -1,71 +1,31 @@
-name: Build OpenSSH (musl)
-
+name: Save redis-8.2.1-bookworm
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  save-images:
     runs-on: ubuntu-latest
-    name: Build OpenSSH with musl
 
     steps:
-      # -------------------------------
-      # 1️⃣ 检出仓库（可选）
-      # -------------------------------
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      # -------------------------------
-      # 2️⃣ 下载 musl 工具链
-      # -------------------------------
-      - name: Download musl toolchain
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Pull Docker images
         run: |
-          wget https://musl.cc/x86_64-linux-musl-native.tgz
-          tar -xf x86_64-linux-musl-native.tgz
-          echo "$PWD/x86_64-linux-musl-native/bin" >> $GITHUB_PATH
+          docker pull redis:8.2.1-bookworm
+          docker pull minio/minio:RELEASE.2024-12-18T13-15-44Z
 
-      # -------------------------------
-      # 3️⃣ 下载 OpenSSH 源码
-      # -------------------------------
-      - name: Download OpenSSH source
+      - name: Save Docker images to tar
         run: |
-          wget -q https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.2p1.tar.gz
-          tar -xf openssh-10.2p1.tar.gz
+          docker save \
+            redis:8.2.1-bookworm minio/minio:RELEASE.2024-12-18T13-15-44Z \
+            -o 10-22-images.tar
 
-      # -------------------------------
-      # 4️⃣ 编译 OpenSSH
-      # -------------------------------
-      - name: Configure & Build
-        working-directory: openssh-10.2p1
-        run: |
-          export CC=x86_64-linux-musl-gcc
-          export CXX=x86_64-linux-musl-g++
-          export AR=x86_64-linux-musl-ar
-          export RANLIB=x86_64-linux-musl-ranlib
-          export LD=x86_64-linux-musl-ld
-          export CFLAGS="-Os -static"
-          export LDFLAGS="-static"
-
-          ./configure \
-            --prefix=/openssh \
-            --with-privsep-path=/var/empty \
-            --without-openssl-engine \
-            --without-zlib-version-check
-
-          make -j$(nproc)
-
-      # -------------------------------
-      # 5️⃣ 打包编译结果
-      # -------------------------------
-      - name: Package build results
-        run: |
-          tar -czf openssh-10.2p1-musl-build.tar.gz openssh-10.2p1
-
-      # -------------------------------
-      # 6️⃣ 上传 Artifact
-      # -------------------------------
-      - name: Upload build artifact
+      - name: Upload tar as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openssh-10.2p1-musl-build
-          path: openssh-10.2p1-musl-build.tar.gz
+          name: 10-22-images.tar
+          path: 10-22-images.tar
