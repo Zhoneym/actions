@@ -37,7 +37,7 @@ jobs:
           sudo find rootfs -perm /6000 -type f -exec chmod a-s {} \;
 
           # 修 resolv.conf（适配 Termux proot）
-          echo "nameserver 8.8.8.8" | sudo tee rootfs/etc/resolv.conf > /dev/null
+          echo "nameserver 223.5.5.5" | sudo tee rootfs/etc/resolv.conf > /dev/null
 
           # 避免 rootfs 内挂载问题
           sudo mkdir -p rootfs/dev rootfs/proc rootfs/sys
@@ -51,10 +51,10 @@ jobs:
 
       - name: Package rootfs
         run: |
-          sudo tar --numeric-owner -czf debian13-rootfs-termux.tar.gz -C rootfs .
+          sudo tar --numeric-owner -czf debian13-rootfs.tar.gz -C rootfs .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: debian13-rootfs-termux
-          path: debian13-rootfs-termux.tar.gz
+          name: debian13-rootfs
+          path: debian13-rootfs.tar.gz
