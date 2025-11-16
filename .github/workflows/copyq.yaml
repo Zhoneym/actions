@@ -1,29 +1,60 @@
-name: Install CopyQ on Ubuntu
+name: Build Debian 13 RootFS for Termux
 
 on:
   workflow_dispatch:
 
 jobs:
-  install-copyq:
+  build-rootfs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update apt and install CopyQ
+      - name: Install tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:hluk/copyq
-          sudo apt-get update
-          sudo apt-get install -y copyq
+          sudo apt update
+          sudo apt install -y debootstrap qemu-user-static tar xz-utils
 
-      - name: Check CopyQ version
+      - name: Run debootstrap (Stage 1)
         run: |
-          copyq --version
+          sudo debootstrap \
+            --variant=minbase \
+            --components=main,contrib,non-free \
+            --arch=arm64 \
+            trixie \
+            rootfs \
+            http://deb.debian.org/debian
 
-      - name: Run basic CopyQ commands
+      - name: Fix permissions for Termux
         run: |
-          copyq add "Hello from GitHub Actions"
-          copyq read 0
+          sudo chroot rootfs bash -c "apt clean"
+
+          # 删除 systemd、udev、logind 等在安卓不可用的组件
+          sudo chroot rootfs bash -c "apt-get purge -y systemd udev systemd-sysv || true"
+
+          # 清理 suid 防止 Termux 权限问题
+          sudo find rootfs -perm /6000 -type f -exec chmod a-s {} \;
+
+          # 修 resolv.conf（适配 Termux proot）
+          echo "nameserver 8.8.8.8" | sudo tee rootfs/etc/resolv.conf > /dev/null
+
+          # 避免 rootfs 内挂载问题
+          sudo mkdir -p rootfs/dev rootfs/proc rootfs/sys
+
+      - name: Cleanup unnecessary files
+        run: |
+          sudo rm -rf rootfs/var/cache/apt/*
+          sudo rm -rf rootfs/usr/share/doc/*
+          sudo rm -rf rootfs/usr/share/man/*
+          sudo rm -rf rootfs/usr/share/info/*
+
+      - name: Package rootfs
+        run: |
+          sudo tar --numeric-owner -czf debian13-rootfs-termux.tar.gz -C rootfs .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian13-rootfs-termux
+          path: debian13-rootfs-termux.tar.gz
