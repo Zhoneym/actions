@@ -42,7 +42,8 @@ jobs:
         wget https://www.python.org/ftp/python/3.9.12/Python-3.9.12.tgz
         tar -xzvf Python-3.9.12.tgz
         cd Python-3.9.12
-        ./configure --host=aarch64-linux-musl --prefix=/usr/local/python-3.9 --enable-optimizations
+        # 设置交叉编译的目标和构建架构
+        ./configure --host=aarch64-linux-musl --build=x86_64-linux-gnu --prefix=/usr/local/python-3.9 --enable-optimizations
         make -j$(nproc)
         sudo make install
 
@@ -68,3 +69,4 @@ jobs:
       with:
         name: python-arm64-xlwings
         path: python-arm64-xlwings.tar.gz
+
