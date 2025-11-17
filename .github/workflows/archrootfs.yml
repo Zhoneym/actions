@@ -32,10 +32,6 @@ jobs:
         # Install base + multilib-devel into /rootfs
         pacstrap -c -G -M /rootfs base base-devel multilib-devel
 
-    - name: Clean package cache
-      run: |
-        arch-chroot /rootfs pacman -Scc --noconfirm || true
-
     - name: Create rootfs tarball
       run: |
         cd /rootfs
