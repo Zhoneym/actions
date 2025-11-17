@@ -1,41 +1,72 @@
-name: Build Python 3.9 with xlwings (musl static)
+name: Build Python 3.9 musl static with xlwings (ARM64)
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    - name: Set up Docker with arm64 architecture
+    - name: Enable QEMU for ARM64
       run: |
         sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Build musl-static Python 3.9 with xlwings
+    - name: Build static Python 3.9 on Alpine ARM64
       run: |
-        docker run --rm --platform linux/arm64 -v $PWD:/workspace -w /workspace arm64v8/ubuntu:20.04 bash -c "
-          DEBIAN_FRONTEND=noninteractive && apt update && apt install -y build-essential curl gcc g++ make \
-          python3.9 python3.9-dev python3.9-venv libssl-dev libffi-dev \
-          zlib1g-dev libreadline-dev libbz2-dev musl-dev \
-          && curl -O https://bootstrap.pypa.io/get-pip.py && python3.9 get-pip.py \
-          && python3.9 -m pip install --upgrade pip \
-          && python3.9 -m venv /workspace/venv \
-          && /workspace/venv/bin/pip install xlwings \
-          && /workspace/venv/bin/pip install pyinstaller"
+        docker run --rm --platform linux/arm64 \
+          -v $PWD:/workspace \
+          -w /workspace \
+          alpine:3.19 sh -c "
+            apk add --no-cache \
+               build-base \
+               musl-dev \
+               musl-utils \
+               openssl-dev \
+               bzip2-dev \
+               zlib-dev \
+               xz-dev \
+               readline-dev \
+               sqlite-dev \
+               libffi-dev \
+               wget \
+               tar \
+               python3 \
+               py3-pip
+
+            # 下载 Python 3.9 源码
+            wget https://www.python.org/ftp/python/3.9.19/Python-3.9.19.tgz
+            tar xf Python-3.9.19.tgz
+            cd Python-3.9.19
+
+            # 使用 musl 静态编译 Python
+            ./configure \
+                --prefix=/workspace/python39 \
+                --enable-optimizations \
+                --with-lto \
+                --with-static-libpython \
+                LDFLAGS='-static'
+
+            make -j$(nproc)
+            make install
+
+            # 安装 pip 包
+            /workspace/python39/bin/pip3 install --upgrade pip
+            /workspace/python39/bin/pip3 install xlwings pyinstaller
+
+            cd /workspace
+          "
 
     - name: Package environment
       run: |
-        # Create a tarball of the virtual environment for offline use
-        tar -czf python_env.tar.gz -C /workspace venv
+        tar -czf python39_musl_static.tar.gz python39
 
-    - name: Upload the package
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: python-env
-        path: python_env.tar.gz
+        name: python39-musl-static
+        path: python39_musl_static.tar.gz
