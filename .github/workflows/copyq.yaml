@@ -20,7 +20,7 @@ jobs:
     - name: Build musl-static Python 3.9 with xlwings
       run: |
         docker run --rm --platform linux/arm64 -v $PWD:/workspace -w /workspace arm64v8/ubuntu:20.04 bash -c "
-          apt update && apt install -y build-essential curl gcc g++ make \
+          DEBIAN_FRONTEND=noninteractive && apt update && apt install -y build-essential curl gcc g++ make \
           python3.9 python3.9-dev python3.9-venv libssl-dev libffi-dev \
           zlib1g-dev libreadline-dev libbz2-dev musl-dev \
           && curl -O https://bootstrap.pypa.io/get-pip.py && python3.9 get-pip.py \
