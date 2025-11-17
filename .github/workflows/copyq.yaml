@@ -16,7 +16,7 @@ jobs:
     - name: Install tools
       run: |
         sudo apt update
-        sudo apt install -y wget binutils patchelf fuse libc6 libstdc++6 squashfs-tools zsync
+        sudo apt install -y wget binutils patchelf fuse libc6 libstdc++6 squashfs-tools zsync imagemagick
 
     - name: Download deb2appimage
       run: |
