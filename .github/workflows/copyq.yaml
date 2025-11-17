@@ -1,60 +1,51 @@
-name: Build Debian 13 RootFS for Termux
+name: Build Synergy AppImage
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
 
 jobs:
-  build-rootfs:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Install tools
-        run: |
-          sudo apt update
-          sudo apt install -y debootstrap qemu-user-static tar xz-utils
+    - name: Install tools
+      run: |
+        sudo apt update
+        sudo apt install -y wget binutils patchelf fuse libc6 libstdc++6 squashfs-tools zsync
 
-      - name: Run debootstrap (Stage 1)
-        run: |
-          sudo debootstrap \
-            --variant=minbase \
-            --components=main,contrib,non-free \
-            --arch=arm64 \
-            trixie \
-            rootfs \
-            http://deb.debian.org/debian
+    - name: Download deb2appimage
+      run: |
+        wget -O deb2appimage https://raw.githubusercontent.com/AppImageCommunity/pkg2appimage/master/pkg2appimage
+        chmod +x deb2appimage
 
-      - name: Fix permissions for Termux
-        run: |
-          sudo chroot rootfs bash -c "apt clean"
+    - name: Download Synergy deb
+      run: |
+        wget -O synergy.deb "https://symless.com/synergy/download/package/synergy-personal-v3/debian-trixie/synergy-3.4.0-linux-noble-x86_64.deb"
 
-          # 删除 systemd、udev、logind 等在安卓不可用的组件
-          sudo chroot rootfs bash -c "apt-get purge -y systemd udev systemd-sysv || true"
+    - name: Prepare AppImage recipe
+      run: |
+        cat << 'EOF' > synergy.yml
+        app: Synergy
+        ingredients:
+          dist: noble
+          packages:
+            - ./synergy.deb
+        script:
+          - mkdir -p usr/bin
+          - cp ./AppDir/usr/bin/synergy3 usr/bin/
+        EOF
 
-          # 清理 suid 防止 Termux 权限问题
-          sudo find rootfs -perm /6000 -type f -exec chmod a-s {} \;
+    - name: Build AppImage
+      run: |
+        ./deb2appimage synergy.yml
 
-          # 修 resolv.conf（适配 Termux proot）
-          echo "nameserver 223.5.5.5" | sudo tee rootfs/etc/resolv.conf > /dev/null
-
-          # 避免 rootfs 内挂载问题
-          sudo mkdir -p rootfs/dev rootfs/proc rootfs/sys
-
-      - name: Cleanup unnecessary files
-        run: |
-          sudo rm -rf rootfs/var/cache/apt/*
-          sudo rm -rf rootfs/usr/share/doc/*
-          sudo rm -rf rootfs/usr/share/man/*
-          sudo rm -rf rootfs/usr/share/info/*
-
-      - name: Package rootfs
-        run: |
-          sudo tar --numeric-owner -czf debian13-rootfs.tar.gz -C rootfs .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: debian13-rootfs
-          path: debian13-rootfs.tar.gz
+    - name: Upload AppImage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Synergy-AppImage
+        path: Synergy*.AppImage
