@@ -64,7 +64,7 @@ jobs:
         tar -czvf python-arm64-xlwings.tar.gz -C /tmp/python_env .
 
     - name: Upload the packaged environment
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: python-arm64-xlwings
         path: python-arm64-xlwings.tar.gz
