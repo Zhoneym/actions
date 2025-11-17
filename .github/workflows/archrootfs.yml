@@ -1,4 +1,4 @@
-name: Build ARM64 Python with xlwings (Alpine + venv)
+name: Build ARM64 Python + xlwings on Ubuntu 20.04
 
 on:
   workflow_dispatch:
@@ -6,32 +6,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Enable QEMU for ARM64
-      run: |
-        sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - name: Enable QEMU for ARM64
+        run: |
+          sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Build Python + xlwings in Alpine ARM64
-      run: |
-        docker run --rm --platform linux/arm64 \
-          -v $PWD:/workspace \
-          -w /workspace \
-          alpine:3.19 sh -c "\
-            apk add --no-cache python3 py3-pip bash ; \
-            python3 -m venv pyenv ; \
-            source pyenv/bin/activate ; \
-            pip install --upgrade pip ; \
-            pip install xlwings ; \
-            tar czf /workspace/python-arm64-xlwings.tar.gz pyenv \
-          "
+      - name: Build Python + venv + xlwings in Ubuntu 20.04 ARM64
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v $PWD:/workspace \
+            -w /workspace \
+            ubuntu:20.04 bash -c "\
+              apt-get update && apt-get install -y python3 python3-venv python3-pip && \
+              python3 -m venv pyenv && \
+              source pyenv/bin/activate && \
+              pip install --upgrade pip && \
+              pip install xlwings && \
+              tar czf /workspace/python-arm64-xlwings-ubuntu20.04.tar.gz pyenv \
+            "
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-arm64-xlwings
-        path: python-arm64-xlwings.tar.gz
-
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-arm64-xlwings-ubuntu20.04
+          path: python-arm64-xlwings-ubuntu20.04.tar.gz
