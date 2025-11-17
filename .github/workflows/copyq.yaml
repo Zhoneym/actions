@@ -26,7 +26,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential wget libssl-dev libffi-dev zlib1g-dev \
         libbz2-dev libreadline-dev libsqlite3-dev curl llvm libncurses5-dev libncursesw5-dev \
-        xz-utils tk-dev liblzma-dev
+        xz-utils tk-dev liblzma-dev python3.9 python3.9-dev python3-pip
 
     - name: Download musl toolchain
       run: |
