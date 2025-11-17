@@ -1,0 +1,48 @@
+name: Build Arch Linux multilib-devel rootfs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+
+    steps:
+    - name: Install base tools
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm arch-install-scripts p7zip
+
+    - name: Create rootfs directory
+      run: |
+        mkdir /rootfs
+
+    - name: Initialize Arch rootfs (pacstrap)
+      run: |
+        # Enable multilib
+        echo "[multilib]" >> /etc/pacman.conf
+        echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+
+        pacman -Syu --noconfirm
+
+        # Install base + multilib-devel into /rootfs
+        pacstrap -c -G -M /rootfs base base-devel multilib-devel
+
+    - name: Clean package cache
+      run: |
+        arch-chroot /rootfs pacman -Scc --noconfirm || true
+
+    - name: Create rootfs tarball
+      run: |
+        cd /rootfs
+        tar --xz -cvf /arch-multilib-devel-rootfs.tar.xz .
+
+    - name: Upload rootfs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: arch-multilib-devel-rootfs
+        path: /arch-multilib-devel-rootfs.tar.xz
