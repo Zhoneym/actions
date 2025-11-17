@@ -37,7 +37,7 @@ jobs:
             - ./synergy.deb
         script:
           - mkdir -p usr/bin
-          - cp ./AppDir/usr/bin/synergy3 usr/bin/
+          - cp ./AppDir/usr/bin/synergy usr/bin/
         EOF
 
     - name: Build AppImage
