@@ -1,4 +1,4 @@
-name: Build ARM64 Python + xlwings on Ubuntu 20.04
+name: Build ARM64 Python + xlwings on Rocky Linux 8
 
 on:
   workflow_dispatch:
@@ -14,22 +14,23 @@ jobs:
         run: |
           sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-      - name: Build Python + venv + xlwings in Ubuntu 20.04 ARM64
+      - name: Build Python + venv + xlwings in Rocky Linux 8 ARM64
         run: |
           docker run --rm --platform linux/arm64 \
             -v $PWD:/workspace \
             -w /workspace \
-            ubuntu:20.04 bash -c "\
-              apt-get update && apt-get install -y python3 python3-venv python3-pip && \
-              python3 -m venv pyenv && \
+            rockylinux:8 bash -c "\
+              yum -y update && \
+              yum -y install python39 python39-venv python39-pip gcc make tar gzip && \
+              python3.9 -m venv pyenv && \
               source pyenv/bin/activate && \
               pip install --upgrade pip && \
               pip install xlwings openpyxl pandas && \
-              tar czf /workspace/python-arm64-xlwings-ubuntu20.04.tar.gz pyenv \
+              tar czf /workspace/python-arm64-xlwings-rocky8.tar.gz pyenv \
             "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-arm64-xlwings-ubuntu20.04
-          path: python-arm64-xlwings-ubuntu20.04.tar.gz
+          name: python-arm64-xlwings-rocky8
+          path: python-arm64-xlwings-rocky8.tar.gz
