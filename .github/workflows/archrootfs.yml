@@ -21,7 +21,7 @@ jobs:
             -w /workspace \
             rockylinux:8 bash -c "\
               yum -y update && \
-              yum -y install python39 python39-venv python39-pip gcc make tar gzip && \
+              yum -y install python39 python39-pip gcc make tar gzip && \
               python3.9 -m venv pyenv && \
               source pyenv/bin/activate && \
               pip install --upgrade pip && \
