@@ -68,7 +68,7 @@ jobs:
         tar czf /tmp/python_3.9_arm64_with_xlwings.tar.gz .
       
     - name: Upload tarball artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: python_3.9_arm64_with_xlwings
         path: /tmp/python_3.9_arm64_with_xlwings.tar.gz
