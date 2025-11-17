@@ -1,51 +1,61 @@
-name: Build Synergy AppImage
+name: Build Python 3.9 with xlwings
 
 on:
-  workflow_dispatch:
   push:
-    branches: ["main"]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install tools
+    - name: Set up musl environment
       run: |
         sudo apt update
-        sudo apt install -y wget binutils patchelf fuse libc6 libstdc++6 squashfs-tools zsync imagemagick desktop-file-utils
+        sudo apt install -y \
+          build-essential \
+          wget \
+          gcc \
+          musl-tools \
+          libssl-dev \
+          zlib1g-dev \
+          libbz2-dev \
+          libreadline-dev \
+          libsqlite3-dev \
+          tk-dev \
+          libgdbm-dev \
+          liblzma-dev \
+          libyaml-dev \
+          libffi-dev \
+          libsqlite3-dev \
+          libssl-dev \
+          git
 
-    - name: Download deb2appimage
+    - name: Download Python 3.9 source
       run: |
-        wget -O deb2appimage https://raw.githubusercontent.com/AppImageCommunity/pkg2appimage/master/pkg2appimage
-        chmod +x deb2appimage
+        wget https://www.python.org/ftp/python/3.9.0/Python-3.9.0.tgz
+        tar -xzf Python-3.9.0.tgz
+        cd Python-3.9.0
+        ./configure --prefix=/opt/python --with-ensurepip=install --host=aarch64-linux-musl --enable-optimizations
+        make -j$(nproc)
+        sudo make altinstall
 
-    - name: Download Synergy deb
+    - name: Install xlwings
       run: |
-        wget -O synergy.deb "https://symless.com/synergy/download/package/synergy-personal-v3/debian-trixie/synergy-3.4.0-linux-noble-x86_64.deb"
+        /opt/python/bin/pip3.9 install xlwings
 
-    - name: Prepare AppImage recipe
+    - name: Package environment for offline use
       run: |
-        cat << 'EOF' > synergy.yml
-        app: Synergy
-        ingredients:
-          dist: noble
-          packages:
-            - ./synergy.deb
-        script:
-          - mkdir -p usr/bin
-          - cp ./AppDir/usr/bin/synergy usr/bin/
-        EOF
-
-    - name: Build AppImage
-      run: |
-        ./deb2appimage synergy.yml
-
-    - name: Upload AppImage artifact
-      uses: actions/upload-artifact@v4
+        cd /opt/python
+        tar czf /tmp/python_3.9_arm64_with_xlwings.tar.gz .
+      
+    - name: Upload tarball artifact
+      uses: actions/upload-artifact@v3
       with:
-        name: Synergy-AppImage
-        path: Synergy*.AppImage
+        name: python_3.9_arm64_with_xlwings
+        path: /tmp/python_3.9_arm64_with_xlwings.tar.gz
