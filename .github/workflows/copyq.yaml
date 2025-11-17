@@ -1,4 +1,4 @@
-name: Build Python 3.9 with xlwings
+name: Build Python 3.9 ARM64 with xlwings
 
 on:
   push:
@@ -12,63 +12,43 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
 
-    - name: Set up musl cross-compiling environment
+    - name: Setup QEMU
       run: |
         sudo apt update
-        sudo apt install -y \
-          build-essential \
-          wget \
-          gcc \
-          musl-tools \
-          libssl-dev \
-          zlib1g-dev \
-          libbz2-dev \
-          libreadline-dev \
-          libsqlite3-dev \
-          tk-dev \
-          libgdbm-dev \
-          liblzma-dev \
-          libyaml-dev \
-          libffi-dev \
-          libsqlite3-dev \
-          libssl-dev \
-          git \
-          clang \
-          llvm
+        sudo apt install -y qemu qemu-user-static
 
-    - name: Download Python 3.9 source
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential gcc g++ make wget curl
+
+    - name: Download musl source
+      run: |
+        wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
+        tar -xvzf musl-1.2.2.tar.gz
+        cd musl-1.2.2
+        ./configure --prefix=/opt/musl
+        make
+        sudo make install
+
+    - name: Build Python 3.9 with MUSL
       run: |
         wget https://www.python.org/ftp/python/3.9.0/Python-3.9.0.tgz
-        tar -xzf Python-3.9.0.tgz
+        tar -xvzf Python-3.9.0.tgz
         cd Python-3.9.0
-        
-        # 使用 musl 进行交叉编译
-        ./configure \
-          --prefix=/opt/python \
-          --host=aarch64-linux-musl \
-          --build=x86_64-linux-gnu \
-          --with-ensurepip=install \
-          --enable-optimizations \
-          --with-system-ffi \
-          --without-ensurepip
-
-        # 编译 Python
-        make -j$(nproc)
-        sudo make altinstall
+        ./configure --prefix=/opt/python --host=aarch64-linux-musl --with-musl
+        make
+        sudo make install
 
     - name: Install xlwings
       run: |
-        /opt/python/bin/pip3.9 install xlwings
+        /opt/python/bin/python3.9 -m venv /opt/python-env
+        source /opt/python-env/bin/activate
+        pip install xlwings
 
-    - name: Package environment for offline use
+    - name: Package Python environment
       run: |
-        cd /opt/python
-        tar czf /tmp/python_3.9_arm64_with_xlwings.tar.gz .
-      
-    - name: Upload tarball artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: python_3.9_arm64_with_xlwings
-        path: /tmp/python_3.9_arm64_with_xlwings.tar.gz
+        tar -czf python-env.tar.gz -C /opt python-env
+        tar -czf python-with-modules.tar.gz -C /opt python
