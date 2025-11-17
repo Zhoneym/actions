@@ -1,10 +1,7 @@
-name: Build Python with xlwings (ARM64, musl)
+name: Build Python 3.9 with xlwings (musl static)
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
@@ -16,59 +13,29 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Setup ARM64 environment
+    - name: Set up Docker with arm64 architecture
       run: |
-        sudo apt update
-        sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+        sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Install dependencies
+    - name: Build musl-static Python 3.9 with xlwings
       run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get install -y build-essential wget libssl-dev libffi-dev zlib1g-dev \
-        libbz2-dev libreadline-dev libsqlite3-dev curl llvm libncurses5-dev libncursesw5-dev \
-        xz-utils tk-dev liblzma-dev python3.9 python3.9-dev python3-pip binutils-aarch64-linux-gnu binutils
+        docker run --rm -v $PWD:/workspace -w /workspace arm64v8/ubuntu:latest bash -c "
+          apt update && apt install -y build-essential curl gcc g++ make \
+          python3.9 python3.9-dev python3.9-venv libssl-dev libffi-dev \
+          zlib1g-dev libreadline-dev libbz2-dev musl-dev \
+          && curl -O https://bootstrap.pypa.io/get-pip.py && python3.9 get-pip.py \
+          && python3.9 -m pip install --upgrade pip \
+          && python3.9 -m venv /workspace/venv \
+          && /workspace/venv/bin/pip install xlwings \
+          && /workspace/venv/bin/pip install pyinstaller"
 
-    - name: Download musl toolchain
+    - name: Package environment
       run: |
-        wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
-        tar -xzvf musl-1.2.2.tar.gz
-        cd musl-1.2.2
-        ./configure --prefix=/usr/local/musl
-        make
-        sudo make install
+        # Create a tarball of the virtual environment for offline use
+        tar -czf python_env.tar.gz -C /workspace venv
 
-    - name: Setup cross-compilation toolchain
-      run: |
-        wget https://www.python.org/ftp/python/3.9.12/Python-3.9.12.tgz
-        tar -xzvf Python-3.9.12.tgz
-        cd Python-3.9.12
-        # 设置交叉编译的目标和构建架构
-        ./configure --host=aarch64-linux-musl --build=x86_64-linux-gnu --prefix=/usr/local/python-3.9 --enable-optimizations
-        make -j$(nproc)
-        sudo make install
-
-    - name: Install xlwings
-      run: |
-        # Install pip and xlwings
-        /usr/local/python-3.9/bin/python3 -m ensurepip
-        /usr/local/python-3.9/bin/python3 -m pip install --upgrade pip
-        /usr/local/python-3.9/bin/python3 -m pip install xlwings
-
-    - name: Package Python and xlwings
-      run: |
-        # Create a virtual environment for packaging
-        mkdir -p /tmp/python_env
-        /usr/local/python-3.9/bin/python3 -m venv /tmp/python_env
-        /tmp/python_env/bin/pip install xlwings
-        /tmp/python_env/bin/pip freeze > requirements.txt
-        # Create a tarball for offline use
-        tar -czvf python-arm64-xlwings.tar.gz -C /tmp/python_env .
-
-    - name: Upload the packaged environment
+    - name: Upload the package
       uses: actions/upload-artifact@v4
       with:
-        name: python-arm64-xlwings
-        path: python-arm64-xlwings.tar.gz
-
+        name: python-env
+        path: python_env.tar.gz
