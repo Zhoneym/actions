@@ -1,4 +1,4 @@
-name: Build Arch Linux multilib-devel rootfs
+name: Build ARM64 Python with xlwings (Alpine + venv)
 
 on:
   workflow_dispatch:
@@ -7,38 +7,37 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: archlinux:base-devel
-      options: --privileged
-
     steps:
-    - name: Install base tools
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Enable QEMU for ARM64
       run: |
-        pacman -Syu --noconfirm
-        pacman -S --noconfirm arch-install-scripts p7zip
+        sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Create rootfs directory
+    - name: Build Python + xlwings in Alpine ARM64
       run: |
-        mkdir /rootfs
+        docker run --rm --platform linux/arm64 \
+          -v $PWD:/workspace \
+          -w /workspace \
+          alpine:3.19 sh -c "
+            # 安装 python3、pip、venv 和 bash
+            apk add --no-cache python3 py3-pip bash \
+            # 升级 pip
+            && pip3 install --upgrade pip \
+            # 创建虚拟环境
+            && python3 -m venv pyenv \
+            # 激活虚拟环境并安装 xlwings
+            && source pyenv/bin/activate \
+            && pip install --upgrade pip \
+            && pip install xlwings \
+            # 打包整个虚拟环境
+            && tar czf /workspace/python-arm64-xlwings.tar.gz pyenv
+          "
 
-    - name: Initialize Arch rootfs (pacstrap)
-      run: |
-        # Enable multilib
-        echo "[multilib]" >> /etc/pacman.conf
-        echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
-
-        pacman -Syu --noconfirm
-
-        # Install base + multilib-devel into /rootfs
-        pacstrap -c -G -M /rootfs base base-devel multilib-devel
-
-    - name: Create rootfs tarball
-      run: |
-        cd /rootfs
-        tar --xz -cvf /arch-multilib-devel-rootfs.tar.xz .
-
-    - name: Upload rootfs artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: arch-multilib-devel-rootfs
-        path: /arch-multilib-devel-rootfs.tar.xz
+        name: python-arm64-xlwings
+        path: python-arm64-xlwings.tar.gz
+
