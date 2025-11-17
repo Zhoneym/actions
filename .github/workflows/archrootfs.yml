@@ -20,19 +20,14 @@ jobs:
         docker run --rm --platform linux/arm64 \
           -v $PWD:/workspace \
           -w /workspace \
-          alpine:3.19 sh -c "
-            # 安装 python3、pip、venv 和 bash
-            apk add --no-cache python3 py3-pip bash \
-            # 升级 pip
-            && pip3 install --upgrade pip \
-            # 创建虚拟环境
-            && python3 -m venv pyenv \
-            # 激活虚拟环境并安装 xlwings
-            && source pyenv/bin/activate \
-            && pip install --upgrade pip \
-            && pip install xlwings \
-            # 打包整个虚拟环境
-            && tar czf /workspace/python-arm64-xlwings.tar.gz pyenv
+          alpine:3.19 sh -c "\
+            apk add --no-cache python3 py3-pip bash ; \
+            pip3 install --upgrade pip ; \
+            python3 -m venv pyenv ; \
+            source pyenv/bin/activate ; \
+            pip install --upgrade pip ; \
+            pip install xlwings ; \
+            tar czf /workspace/python-arm64-xlwings.tar.gz pyenv \
           "
 
     - name: Upload artifact
