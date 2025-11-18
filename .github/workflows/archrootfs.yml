@@ -1,4 +1,4 @@
-name: Build ARM64 Python + xlwings on Rocky Linux 8
+name: Build ARM64 Python + xlwings on Rocky Linux 8 (using precompiled static Python)
 
 on:
   workflow_dispatch:
@@ -14,23 +14,23 @@ jobs:
         run: |
           sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-      - name: Build Python + venv + xlwings in Rocky Linux 8 ARM64
+      - name: Build Python + xlwings on Rocky Linux 8 ARM64
         run: |
           docker run --rm --platform linux/arm64 \
             -v $PWD:/workspace \
             -w /workspace \
             rockylinux:8 bash -c "\
-              yum -y update && \
-              yum -y install python39 python39-pip gcc make tar gzip && \
-              python3.9 -m venv pyenv && \
-              source pyenv/bin/activate && \
-              pip install --upgrade pip && \
-              pip install xlwings openpyxl pandas && \
-              tar czf /workspace/python-arm64-xlwings-rocky8.tar.gz pyenv \
+              yum -y install wget tar && \
+              wget https://github.com/astral-sh/python-build-standalone/releases/download/20251031/cpython-3.10.19+20251031-aarch64-unknown-linux-musl-install_only_stripped.tar.gz && \
+              tar xzf cpython-3.10.19+20251031-aarch64-unknown-linux-musl-install_only_stripped.tar.gz -C /workspace && \
+              /workspace/python/bin/python3 -m pip install --upgrade pip && \
+              /workspace/python/bin/python3 -m pip install xlwings openpyxl pandas && \
+              tar czf /workspace/python-arm64-xlwings-rocky8.tar.gz /workspace/python \
             "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: python-arm64-xlwings-rocky8
-          path: python-arm64-xlwings-rocky8.tar.gz
+          path: /workspace/python-arm64-xlwings-rocky8.tar.gz
+
