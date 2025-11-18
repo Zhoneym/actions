@@ -31,6 +31,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-arm64-xlwings-rockylinux8
+          name: python-arm64-xlwings-rocky8
           path: /workspace/python-arm64-xlwings-rocky8.tar.gz
 
