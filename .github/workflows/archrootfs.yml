@@ -20,7 +20,7 @@ jobs:
             -v $PWD:/workspace \
             -w /workspace \
             rockylinux:8 bash -c "\
-              yum -y install wget tar python3-pip && \
+              yum -y install wget tar && \
               wget https://github.com/astral-sh/python-build-standalone/releases/download/20251031/cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && \
               tar xzf cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz -C /workspace && \
               /workspace/python/bin/python3 -m pip install --upgrade pip && \
