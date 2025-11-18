@@ -22,21 +22,14 @@ jobs:
             rockylinux:8 bash -c "\
               yum -y install wget tar && \
               wget https://github.com/astral-sh/python-build-standalone/releases/download/20251031/cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && \
-              tar xzf cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz -C /workspace && \
-              ls /workspace/python && \
-              /workspace/python/bin/python3 -m pip install --upgrade pip && \
-              /workspace/python/bin/python3 -m pip install xlwings openpyxl pandas && \
-              ls /workspace/python && \
-              tar czf /workspace/python-arm64-xlwings-rocky8.tar.gz /workspace/python \
+              tar xvzf cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && \
+              python/bin/python3 -m pip install --upgrade pip && \
+              python/bin/python3 -m pip install xlwings openpyxl pandas && \
+              tar czf python-arm64-xlwings-rocky8.tar.gz python \
             "
-
-      - name: Check if tar.gz file exists
-        run: |
-          ls -l /workspace/python-arm64-xlwings-rocky8.tar.gz
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: python-arm64-xlwings-rocky8
-          path: /workspace/python-arm64-xlwings-rocky8.tar.gz
-
+          path: python-arm64-xlwings-rocky8.tar.gz
