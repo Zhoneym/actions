@@ -22,8 +22,8 @@ jobs:
             rockylinux:8 bash -c "\
               yum -y install wget tar && \
               wget https://github.com/astral-sh/python-build-standalone/releases/download/20240726/cpython-3.8.19+20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && \
-              tar xvzf cpython-3.10.19+20251031-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && mkdir download-pip && \
-              python/bin/python3 -m pip download xlwings openpyxl pandas -d download-pip && \
+              tar xvzf cpython-3.8.19+20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz && mkdir download-pip && \
+              python/bin/python3 -m pip download pip xlwings openpyxl pandas -d download-pip && \
               tar czf python-arm64-xlwings-pip.tar.gz download-pip \
             "
 
